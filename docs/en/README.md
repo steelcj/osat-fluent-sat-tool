@@ -1,6 +1,6 @@
 # osat-fluent-sat-tool
 
-Version: 0.1.0
+Version: 0.1.1
 Status: Draft
 Style Guide: style-guide--technical-documentation-for-technologists v0.2.0
 
@@ -82,4 +82,5 @@ This document, *osat-fluent-sat-tool*, by **Christopher Steel**, with AI assista
 
 | Version | Status | Notes |
 |---------|--------|-------|
+| 0.1.1 | Draft | make_owner_only skips symlinks; chmod through a venv's interpreter symlink hit EPERM on the system Python |
 | 0.1.0 | Draft | Initial scaffold: manager with install, switch, status, remove lifecycle, nix wrapper template, validated against SAT Tools v0.4.0 |
