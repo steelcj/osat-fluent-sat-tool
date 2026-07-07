@@ -103,6 +103,11 @@ def make_owner_only(path: Path) -> None:
         os.chmod(root, DIR_MODE)
         for f in files:
             p = Path(root) / f
+            # Never chmod through a symlink: a venv's bin/python3 links to the
+            # system interpreter, which the user does not own and the manager
+            # must never touch. A symlink's own mode is meaningless on Linux.
+            if p.is_symlink():
+                continue
             mode = EXEC_MODE if os.access(p, os.X_OK) else FILE_MODE
             os.chmod(p, mode)
 
