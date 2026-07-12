@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# source
+#   project: osat-fluent-sat-tool
+#   path: install-sat.py
+#
 # install-sat.py
 """
 install-sat.py — Manage user-space installations of SAT Tools.
@@ -171,11 +176,20 @@ def write_wrappers() -> None:
     BIN_DIR.mkdir(parents=True, exist_ok=True)
     for command, dispatcher in WRAPPED_COMMANDS:
         wrapper = BIN_DIR / command
-        wrapper.write_text(
-            template.format(command=command, dispatcher=dispatcher,
-                            manager=MANAGER_NAME, env_file=_tilde(ENV_FILE)),
-            encoding="utf-8",
+        rendered = template.format(command=command, dispatcher=dispatcher,
+                                   manager=MANAGER_NAME, env_file=_tilde(ENV_FILE))
+        # Convention: the template declares `generates`; the written wrapper
+        # records `generated`, concrete values only, stamped with its maker.
+        rendered = rendered.replace(
+            "# generates\n",
+            "# generated\n",
+            1,
+        ).replace(
+            f"#   path: ~/.local/bin/{command}\n",
+            f"#   path: ~/.local/bin/{command}\n#   by: install-sat.py --install\n",
+            1,
         )
+        wrapper.write_text(rendered, encoding="utf-8")
         os.chmod(wrapper, EXEC_MODE)
         print(f"  wrapper written:  {_tilde(wrapper)}  ✓")
 
@@ -222,6 +236,27 @@ def extract_artifact(tarball: Path, version: str, workdir: Path) -> Path:
     return top
 
 
+def verify_declared_version(install_root: Path, requested: str) -> None:
+    """Declared-versus-actual tripwire: the artifact's VERSION must equal the
+    requested tag. A mismatch means the tag was cut before its version bump;
+    refuse to activate a mislabelled artifact."""
+    version_file = install_root / "VERSION"
+    try:
+        declared = version_file.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        print("[SAT-TOOL ERROR] The artifact carries no VERSION file. Refusing to", file=sys.stderr)
+        print("  activate an unversioned artifact; removing it.", file=sys.stderr)
+        shutil.rmtree(install_root, ignore_errors=True)
+        sys.exit(1)
+    if declared != requested:
+        print(f"[SAT-TOOL ERROR] Requested v{requested} but the artifact declares", file=sys.stderr)
+        print(f"  v{declared}. The tag was likely cut before its version bump.", file=sys.stderr)
+        print("  Refusing to activate a mislabelled artifact; removing it.", file=sys.stderr)
+        shutil.rmtree(install_root, ignore_errors=True)
+        sys.exit(1)
+    print(f"  version verified: artifact declares v{declared}  \u2713")
+
+
 def create_venv(install_root: Path) -> None:
     """Create the per-version venv inside the artifact and install satlib."""
     venv_dir = install_root / ".venv"
@@ -230,16 +265,30 @@ def create_venv(install_root: Path) -> None:
     if result.returncode != 0:
         print("[SAT-TOOL ERROR] venv creation failed.", file=sys.stderr)
         sys.exit(1)
-    pip = venv_dir / ("Scripts" if os.name == "nt" else "bin") / "pip"
+    bin_dir = venv_dir / ("Scripts" if os.name == "nt" else "bin")
+    pip = bin_dir / "pip"
+    python = bin_dir / ("python.exe" if os.name == "nt" else "python")
+    satlib_src = install_root / "en" / "lib" / "satlib"
     print("  installing satlib and pinned dependencies ...")
     result = subprocess.run(
-        [str(pip), "install", "--quiet", "-e", str(install_root)],
-        cwd=str(install_root),
+        [str(pip), "install", "--quiet", str(satlib_src)],
     )
     if result.returncode != 0:
         print("[SAT-TOOL ERROR] pip install failed. The partial install was kept for", file=sys.stderr)
         print(f"  inspection at {_tilde(install_root)}. Remove it with --remove.", file=sys.stderr)
         sys.exit(1)
+    # No claim without a verification behind it: prove the library imports
+    # from this venv before declaring the install good.
+    result = subprocess.run(
+        [str(python), "-c", "import satlib"],
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        print("[SAT-TOOL ERROR] satlib was installed but does not import from the", file=sys.stderr)
+        print("  venv. Refusing to activate a broken artifact; removing it.", file=sys.stderr)
+        shutil.rmtree(install_root, ignore_errors=True)
+        sys.exit(1)
+    print("  satlib import verified  \u2713")
 
 
 def cmd_install(version: str) -> int:
@@ -268,6 +317,7 @@ def cmd_install(version: str) -> int:
         shutil.move(str(tree), str(install_root))
     print(f"  artifact placed:  {_tilde(install_root)}  ✓")
 
+    verify_declared_version(install_root, version)
     create_venv(install_root)
     make_owner_only(install_root)
     write_env_file(version)
