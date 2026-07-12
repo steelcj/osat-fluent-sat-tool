@@ -1,6 +1,6 @@
 # osat-fluent-sat-tool
 
-Version: 0.1.1
+Version: 0.2.0
 Status: Draft
 
 A user-space manager for [SAT Tools](https://github.com/steelcj/sat) installations, part of the OS Sovereign Autonomous Tools (OSAT) Fluent collection.
