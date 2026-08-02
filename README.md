@@ -11,7 +11,8 @@ This manager installs versioned, self-contained SAT Tools artifacts to `~/.local
 
 ```bash
 python3 install-sat.py --install
-source /home/initial/.local/share/sat-tool/0.7.1/.venv/bin/activate
+
+python3 install-sat.py --switch 0.7.1
 sat init --version
 ```
 
