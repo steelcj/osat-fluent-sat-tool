@@ -268,27 +268,34 @@ def create_venv(install_root: Path) -> None:
     bin_dir = venv_dir / ("Scripts" if os.name == "nt" else "bin")
     pip = bin_dir / "pip"
     python = bin_dir / ("python.exe" if os.name == "nt" else "python")
-    satlib_src = install_root / "en" / "lib" / "satlib"
-    print("  installing satlib and pinned dependencies ...")
+    # Install the runtime dependency ledger. requirements.txt is composition
+    # only: it pulls each component's co-located <component>.requirements.txt,
+    # and satlib's line selects the package plus the extras the tools need
+    # (e.g. mdformat for ADR-030 content-ingress normalization). Run from the
+    # artifact root so the ledger's relative paths (./en/lib/satlib) resolve.
+    print("  installing runtime dependencies from requirements.txt ...")
     result = subprocess.run(
-        [str(pip), "install", "--quiet", str(satlib_src)],
+        [str(pip), "install", "--quiet", "-r", "requirements.txt"],
+        cwd=str(install_root),
     )
     if result.returncode != 0:
         print("[SAT-TOOL ERROR] pip install failed. The partial install was kept for", file=sys.stderr)
         print(f"  inspection at {_tilde(install_root)}. Remove it with --remove.", file=sys.stderr)
         sys.exit(1)
-    # No claim without a verification behind it: prove the library imports
-    # from this venv before declaring the install good.
+    # No claim without a verification behind it: prove the venv can actually
+    # run the tools, not merely import the library. mdformat is required for
+    # content ingress, so a venv that cannot import it cannot ingress.
     result = subprocess.run(
-        [str(python), "-c", "import satlib"],
+        [str(python), "-c", "import satlib, mdformat"],
         capture_output=True,
     )
     if result.returncode != 0:
-        print("[SAT-TOOL ERROR] satlib was installed but does not import from the", file=sys.stderr)
-        print("  venv. Refusing to activate a broken artifact; removing it.", file=sys.stderr)
+        print("[SAT-TOOL ERROR] the runtime venv is incomplete (satlib or a", file=sys.stderr)
+        print("  required dependency such as mdformat does not import). Refusing", file=sys.stderr)
+        print("  to activate a broken artifact; removing it.", file=sys.stderr)
         shutil.rmtree(install_root, ignore_errors=True)
         sys.exit(1)
-    print("  satlib import verified  \u2713")
+    print("  runtime venv verified (satlib, mdformat)  \u2713")
 
 
 def cmd_install(version: str) -> int:
