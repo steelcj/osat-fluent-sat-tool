@@ -9,10 +9,12 @@ This manager installs versioned, self-contained SAT Tools artifacts to `~/.local
 
 ## Quick start
 
-```bash
-python3 install-sat.py --install
+This is the process for replacing a pre 1.x.x version of sat-tools with a newer version
 
-python3 install-sat.py --switch 0.7.1
+```bash
+python3 install-sat.py --install 0.7.4
+python3 install-sat.py --switch 0.7.4
+python3 install-sat.py --remove 0.7.3
 sat init --version
 ```
 
