@@ -3,6 +3,9 @@
 .DS_Store
 Thumbs.db
 
+# Claude
+.claude/
+
 # Python packaging artifacts from `pip install .` / `python -m build`
 build/
 dist/

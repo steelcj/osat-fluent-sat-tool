@@ -9,6 +9,8 @@
 # Do not edit generated wrappers; regenerated on --install and --switch.
 # Sources the env file at runtime, so version switching requires no shell
 # restart and non-interactive contexts (cron, systemd) resolve the same version.
-# The dispatcher resolves the per-version venv python itself.
+# Bash tier dispatchers resolve the per-version venv python themselves; Python
+# tier dispatchers are launched with it, because a `#!/usr/bin/env python3`
+# shebang would resolve the system interpreter, which has no satlib.
 . "$HOME/.config/sat-tool/sat-tool.env"
-exec "$SAT_TOOL_ROOT/{dispatcher}" "$@"
+exec {launcher}"$SAT_TOOL_ROOT/{dispatcher}" "$@"
