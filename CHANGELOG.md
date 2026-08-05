@@ -7,6 +7,8 @@ N` file and the git tags. Dates are ISO 8601.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-04
+
 ### Added
 
 - `content` tier wrapper. The installer provisioned the content tier's runtime dependency (mdformat, for ADR-030 ingress normalization) but never wrote a `content` command, so the tier was installed and unreachable. Wrappers are now written for every tier the artifact carries.
